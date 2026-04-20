@@ -205,3 +205,14 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-specific research artifacts
+output/*
+!output/.gitkeep
+!output/README.md
+
+# Keep only structure and guidance under data by default
+# Remove these rules if curated data should be versioned.
+data/*
+!data/.gitkeep
+!data/README.md

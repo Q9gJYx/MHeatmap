@@ -1,0 +1,10 @@
+[project]
+name = "mheatmap"
+version = "0.1.0"
+description = "Experimental collaboration repository for VIS 2026 short paper preparation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.uv]
+package = false
