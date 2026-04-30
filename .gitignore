@@ -210,9 +210,23 @@ __marimo__/
 output/*
 !output/.gitkeep
 !output/README.md
+!output/main_experiment/
+!output/main_experiment/synthetic_benchmark/
+!output/main_experiment/synthetic_benchmark/synthetic_strong_baselines_paper.csv
+!output/main_experiment/synthetic_benchmark/synthetic_strong_baselines_paper.md
+!output/main_experiment/real_world_benchmark/
+!output/main_experiment/real_world_benchmark/real_world_benchmark_paper.csv
+!output/main_experiment/real_world_benchmark/real_world_benchmark_paper.md
+!output/main_experiment/real_world_benchmark/processed_matrices/
+!output/main_experiment/real_world_benchmark/processed_matrices/*.csv
+!output/main_experiment/real_world_benchmark/figures/
+!output/main_experiment/real_world_benchmark/figures/*.png
 
 # Keep only structure and guidance under data by default
 # Remove these rules if curated data should be versioned.
 data/*
 !data/.gitkeep
 !data/README.md
+!data/main_experiment/
+!data/main_experiment/real_world_benchmark/
+!data/main_experiment/real_world_benchmark/README.md
