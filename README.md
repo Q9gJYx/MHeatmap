@@ -1,9 +1,5 @@
 # MHeatmap — Reproducibility Companion
 
-Code for the IEEE VIS 2026 short paper
-**MHeatmap: Two-Walk Laplacian Reordering and Mosaic Layout for Rectangular
-Matrix Visualization** (Wang et al., 2026).
-
 The MHeatmap method itself is published as the
 [`mheatmap`](https://github.com/qqgjyx/mheatmap) Python package
 (PyPI v1.2.5). This repository contains only the benchmark, preprocessing,
