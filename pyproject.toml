@@ -1,10 +1,20 @@
 [project]
-name = "mheatmap"
+name = "mheatmap-reproducibility"
 version = "0.1.0"
 description = "Reproducibility companion for the MHeatmap method"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "scanpy",
+    "igraph",
+    "mheatmap==1.2.5",
+]
 
 [tool.uv]
 package = false
