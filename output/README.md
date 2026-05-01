@@ -2,4 +2,5 @@
 
 Generated artifacts (plots, tables, logs, temporary exports) should be placed here.
 
-This directory is ignored by Git except for placeholder files.
+The main paper benchmark outputs
+under `output/main_experiment` are intentionally versioned for reproducibility.
