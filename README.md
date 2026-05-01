@@ -103,11 +103,6 @@ Update `DATA_DIR` at the top of `examples/tabula_sapiens/tabula_sapiens_v2.py`
 to point at your local copy of the four `.h5ad` files
 (`bone_marrow`, `spleen`, `stomach`, `vasculature`).
 
-```
-
-A versioned snapshot with a citable archive DOI (OSF or Zenodo) will be linked
-here before the camera-ready deadline.
-
 ## License
 
 MIT. See `LICENSE`.

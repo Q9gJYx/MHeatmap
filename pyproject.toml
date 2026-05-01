@@ -1,7 +1,7 @@
 [project]
 name = "mheatmap"
 version = "0.1.0"
-description = "Experimental collaboration repository for VIS 2026 short paper preparation"
+description = "Reproducibility companion for the MHeatmap method"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
