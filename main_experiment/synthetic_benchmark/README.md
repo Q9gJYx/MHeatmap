@@ -23,7 +23,7 @@ Install the paper-benchmark dependencies and the public `mheatmap` package:
 
 ```bash
 uv pip install numpy pandas scipy scikit-learn matplotlib
-uv pip install git+https://github.com/qqgjyx/mheatmap.git
+uv pip install mheatmap==1.2.5
 ```
 
 ## Reproduce
