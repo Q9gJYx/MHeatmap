@@ -103,17 +103,6 @@ Update `DATA_DIR` at the top of `examples/tabula_sapiens/tabula_sapiens_v2.py`
 to point at your local copy of the four `.h5ad` files
 (`bone_marrow`, `spleen`, `stomach`, `vasculature`).
 
-## Citation
-
-```bibtex
-@inproceedings{wang2026mheatmap,
-  author    = {Wang, Juntang and Zhu, Liming and Cao, Siyuan and Wu, Hao and
-               Zhang, Man and Zou, Dongmian and Xu, Shixin},
-  title     = {{MHeatmap}: Two-Walk Laplacian Reordering and Mosaic Layout
-               for Rectangular Matrix Visualization},
-  booktitle = {IEEE VIS 2026 Short Papers},
-  year      = {2026}
-}
 ```
 
 A versioned snapshot with a citable archive DOI (OSF or Zenodo) will be linked
