@@ -18,3 +18,8 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "psutil>=7.2.2",
+]

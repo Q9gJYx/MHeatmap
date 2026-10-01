@@ -1,9 +1,36 @@
 """D4 -- component-wise ordering audit (reviewer kFbK W2 / XFNF W2).
 
-Compares the released single-Fiedler-vector procedure against the Section 3.3
+Compares the pre-fix single-Fiedler-vector procedure against the Section 3.3
 component-wise procedure on the real benchmarks, under both One-Walk and Two-Walk,
 over an alpha grid, reporting every metric under both the released and the
 paper-faithful definition.
+
+The two procedures differ by *three* independent changes, so a gap here does not
+isolate the component correction:
+
+1. component-wise ordering -- the subject of A7, and the only change reviewers
+   asked for;
+2. the final orientation step. The pre-fix path ended with
+   `orient_orders_for_diagonal`, which searched four row/column reversals and kept
+   the lowest 2-SUM -- the metric being reported. The paper-spec commit dropped
+   that from One-Walk and Two-Walk;
+3. the `argsort` tie-break, quicksort before and `kind="stable"` now. On MBTA 100
+   of the 133 Fiedler entries are tied, so this alone reorders the result.
+
+Changes 2 and 3 are **paper-conformance fixes, not arbitrary edits**. Section 3.3
+already specifies the new behaviour verbatim: "we orient the vector so that its
+first coordinate of maximum absolute value is positive, then apply a stable
+sort". The submitted code did neither -- it searched four reversals for the lowest
+2-SUM and used an unstable sort -- so the submitted Table 1 numbers were produced
+by code that did not implement the procedure the paper describes. That is the same
+class of defect as the Band@10% and MWB-AUC mismatches, and unlike those it is not
+confined to disconnected support.
+
+Because changes 2 and 3 apply to connected matrices, they move the published
+One-Walk and Two-Walk numbers on ACS, LODES, 20 Newsgroups and MBTA as well as on
+the three disconnected ones. The self-check below therefore validates the
+component plumbing directly rather than asserting the two procedures agree, which
+is no longer true by design.
 
 Run:
     cd MHeatMap/src
@@ -53,15 +80,6 @@ DATASET_LABELS = {
 }
 DEFAULT_ALPHAS = (1.0, 2.0, 4.0, 6.0, 8.0, 12.0)
 
-METRIC_COLUMNS = (
-    "r2s",
-    "band_released",
-    "band_eq16",
-    "mwb_band",
-    "mwb_block",
-)
-
-
 def load_datasets(keys: list[str]) -> dict[str, np.ndarray]:
     out: dict[str, np.ndarray] = {}
     for key in keys:
@@ -99,6 +117,39 @@ def evaluate(matrix: np.ndarray, alpha: float | None, mode: str) -> dict[str, fl
     return row
 
 
+def _component_plumbing_ok(matrix: np.ndarray, components: list) -> str | None:
+    """Return a description of the first fault, or None when the machinery is sound.
+
+    On a single-component matrix the component path has nothing to assemble, so it
+    must reduce to one spectral solve over exactly the full active support. This
+    test used to be written as "the two procedures return identical orderings"; that
+    stopped holding when the paper-spec commit also changed the orientation step and
+    the argsort tie-break, so it is now checked directly.
+    """
+    if len(components) != 1:
+        return f"expected a single component in the active support, found {len(components)}"
+
+    values = np.asarray(matrix, dtype=float)
+    active_rows = np.flatnonzero(values.sum(axis=1) > 0)
+    active_cols = np.flatnonzero(values.sum(axis=0) > 0)
+    component = components[0]
+    if not np.array_equal(component.row_indices, active_rows):
+        return "the single component does not cover the active rows"
+    if not np.array_equal(component.col_indices, active_cols):
+        return "the single component does not cover the active columns"
+
+    n_rows, n_cols = values.shape
+    for rows, cols in (
+        tc.order_single(matrix, 1.0, "ow"),
+        tc.order_componentwise(matrix, 0.0, "ow"),
+    ):
+        if not np.array_equal(np.sort(rows), np.arange(n_rows)):
+            return "One-walk returned a malformed row order"
+        if not np.array_equal(np.sort(cols), np.arange(n_cols)):
+            return "One-walk returned a malformed column order"
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="*", default=list(DATASET_LABELS))
@@ -125,6 +176,12 @@ def main() -> None:
         single_component = len(components) == 1
         print(f"\n=== {label} ({n_rows}x{n_cols}) -- {len(components)} component(s)")
 
+        if single_component:
+            checks_run += 1
+            problem = _component_plumbing_ok(matrix, components)
+            if problem is not None:
+                failures.append(f"{label} | {problem}")
+
         configurations: list[tuple[str, float | None]] = [("One-walk", None)]
         configurations += [("Two-walk", alpha) for alpha in args.alphas]
 
@@ -143,17 +200,6 @@ def main() -> None:
                 }
             )
 
-            # A single-component matrix must give identical results under both
-            # procedures; any drift means the component plumbing is wrong.
-            if single_component:
-                checks_run += 1
-                drift = max(
-                    abs(row[f"single_{m}"] - row[f"comp_{m}"]) for m in METRIC_COLUMNS
-                )
-                if drift >= 1e-9:
-                    failures.append(
-                        f"{label} | {method} | alpha={alpha} | max drift {drift:.3e}"
-                    )
 
             alpha_text = "   -" if alpha is None else f"{alpha:4g}"
             print(
@@ -172,13 +218,13 @@ def main() -> None:
     print(f"\nWrote results to {OUTPUT_DIR}")
     for name in ("component_audit.csv", "component_audit.md", "components.csv"):
         print(f"  {name}")
-    print(f"\nSelf-check: {checks_run} single-component configurations compared.")
+    print(f"\nSelf-check: {checks_run} single-component datasets checked.")
     if failures:
         print("  FAILURES:")
         for line in failures:
             print(f"    {line}")
     else:
-        print("  All identical, as required.")
+        print("  Component machinery sound on all of them.")
 
 
 def _write_csv(path: Path, records: list[dict]) -> None:
@@ -230,9 +276,27 @@ def _write_markdown(
     lines = [
         "# Component-wise ordering audit (Section 3.3)",
         "",
-        "- `single` = released procedure: one Fiedler vector over the whole active support.",
-        "- `comp` = Section 3.3 procedure: order each component, arrange by decreasing mass.",
+        "- `single` = pre-fix procedure: one Fiedler vector over the whole active",
+        "  support, finished with the released `orient_orders_for_diagonal` step.",
+        "- `comp` = Section 3.3 procedure, via the benchmark's canonical",
+        "  implementation: order each component, arrange by decreasing mass.",
         "- `delta` = comp - single. Negative is an improvement for R2S only.",
+        "",
+        "**Three changes, not one.** The two procedures differ by the component",
+        "correction *and* by two fixes the paper-spec commit bundled with it:",
+        "",
+        "| # | Change | Datasets affected |",
+        "|---|---|---|",
+        "| 1 | Component-wise ordering (Section 3.3) | SIC -> NAICS, CIP -> SOC, OpenAlex |",
+        "| 2 | Orientation: the 2-SUM search in `orient_orders_for_diagonal` dropped | all |",
+        "| 3 | `argsort` quicksort -> `kind=\"stable\"` | 20 Newsgroups, MBTA |",
+        "",
+        "Changes 2 and 3 are paper-conformance fixes -- Section 3.3 specifies",
+        '"orient the vector so that its first coordinate of maximum absolute value',
+        'is positive, then apply a stable sort", and the submitted code did neither.',
+        "So a nonzero delta on a **single-component** dataset is expected, and on",
+        "those four datasets it is entirely changes 2 and 3. On MBTA 100 of the 133",
+        "Fiedler entries are tied, so change 3 alone reorders the result.",
         "",
         "**Metric definitions.** `band_released` and `mwb_band` reproduce the released",
         "implementation and therefore Table 1. `band_eq16` (Eq. 16) and `mwb_block`",
@@ -269,8 +333,19 @@ def _write_markdown(
 
     lines += ["", "## Self-check", ""]
     lines.append(
-        f"{checks_run} single-component configurations were run through both "
-        "procedures; these must be identical."
+        f"{checks_run} single-component datasets were checked. With one component "
+        "there is nothing to assemble, so the component path must reduce to a "
+        "single solve over exactly the full active support and return a valid "
+        "permutation.",
+    )
+    lines.append(
+        "",
+    )
+    lines.append(
+        "This does **not** assert that the two procedures agree on those datasets, "
+        "because they no longer do: the paper-spec commit also dropped the "
+        "2-SUM orientation step and switched `argsort` to a stable sort. See the "
+        "module docstring.",
     )
     if failures:
         lines.append("")
@@ -278,7 +353,7 @@ def _write_markdown(
         lines += [f"- {line}" for line in failures]
     else:
         lines.append("")
-        lines.append("All identical, as required.")
+        lines.append("Component machinery is sound on all of them.")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

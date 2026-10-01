@@ -487,6 +487,59 @@ def _orient_fiedler(vector: np.ndarray) -> np.ndarray:
     return oriented
 
 
+# Rebuttal hook, Section 3.3.  ``None`` keeps the shipped dense behaviour, so the
+# published pipeline and the paper-spec tests are unaffected.  Setting the hook routes
+# the per-component Fiedler solve through ``rebuttal/tw_matrixfree.py`` without touching
+# any of the orchestration below (normalisation, component ordering, orientation, the
+# row/column split, zero-marginal handling, permutation validation).
+BLOCK_SOLVER_HOOK = None
+BLOCK_SOLVER = "auto"  # "dense" | "matrix_free" | "auto"
+DENSE_MAX_VERTICES = 512
+
+
+def _block_fiedler(
+    block: np.ndarray,
+    *,
+    mode: str,
+    alpha: float | None,
+) -> np.ndarray:
+    """Joint Fiedler order of one connected component block.
+
+    ``mode`` and ``alpha`` use this module's vocabulary (``"one_walk"``/``"two_walk"``);
+    an installed hook is responsible for translating to its own.
+    """
+    if BLOCK_SOLVER_HOOK is not None:
+        size = block.shape[0] + block.shape[1]
+        if BLOCK_SOLVER == "matrix_free" or (
+            BLOCK_SOLVER == "auto" and size > DENSE_MAX_VERTICES
+        ):
+            return BLOCK_SOLVER_HOOK(block, mode, alpha)
+
+    if mode == "one_walk":
+        local_rows, local_cols = block.shape
+        adjacency = np.block(
+            [
+                [np.zeros((local_rows, local_rows), dtype=float), block],
+                [block.T, np.zeros((local_cols, local_cols), dtype=float)],
+            ]
+        )
+        laplacian = np.diag(adjacency.sum(axis=1)) - adjacency
+    else:
+        laplacian = np.asarray(
+            mheatmap_two_walk_laplacian(block, alpha=float(alpha)),
+            dtype=float,
+        )
+
+    expected_size = block.shape[0] + block.shape[1]
+    if laplacian.shape != (expected_size, expected_size):
+        raise RuntimeError("component Laplacian has an unexpected shape")
+    eigenvalues, eigenvectors = eigh(laplacian, check_finite=False)
+    if len(eigenvalues) < 2:
+        raise RuntimeError("an active support component must have >=2 vertices")
+    fiedler = _orient_fiedler(eigenvectors[:, 1])
+    return np.argsort(fiedler, kind="stable")
+
+
 def _componentwise_spectral_reorder(
     matrix: np.ndarray,
     *,
@@ -550,29 +603,7 @@ def _componentwise_spectral_reorder(
     component_masses: list[float] = []
     for mass, _, component_rows, component_cols in components:
         block = normalized[np.ix_(component_rows, component_cols)]
-        if mode == "one_walk":
-            local_rows, local_cols = block.shape
-            adjacency = np.block(
-                [
-                    [np.zeros((local_rows, local_rows), dtype=float), block],
-                    [block.T, np.zeros((local_cols, local_cols), dtype=float)],
-                ]
-            )
-            laplacian = np.diag(adjacency.sum(axis=1)) - adjacency
-        else:
-            laplacian = np.asarray(
-                mheatmap_two_walk_laplacian(block, alpha=float(alpha)),
-                dtype=float,
-            )
-
-        expected_size = block.shape[0] + block.shape[1]
-        if laplacian.shape != (expected_size, expected_size):
-            raise RuntimeError("component Laplacian has an unexpected shape")
-        eigenvalues, eigenvectors = eigh(laplacian, check_finite=False)
-        if len(eigenvalues) < 2:
-            raise RuntimeError("an active support component must have >=2 vertices")
-        fiedler = _orient_fiedler(eigenvectors[:, 1])
-        joint_order = np.argsort(fiedler, kind="stable")
+        joint_order = _block_fiedler(block, mode=mode, alpha=alpha)
 
         local_row_count = len(component_rows)
         local_rows = joint_order[joint_order < local_row_count]

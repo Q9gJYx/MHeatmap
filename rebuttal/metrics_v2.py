@@ -7,6 +7,13 @@ Two definitions of each diagonal metric are provided, deliberately:
     Table 1. Kept so corrected numbers can be compared against the published
     ones and so reviewer kFbK W1 can be answered with both figures side by side.
 
+The benchmark's paper-spec commit renamed ``diagonal_band_mass`` to
+``legacy_integer_band_mass`` and moved the Eq. (16) definition into a new
+``normalized_band_mass``. ``released_band_mass`` below resolves the legacy name
+at call time so this module keeps working against both revisions. ``mwb_auc``
+itself was not changed numerically -- it is still the trapezoidal integral of
+the legacy integer-window band mass.
+
 ``band_mass_eq16`` / ``mwb_auc_block``
     Paper-faithful definitions from Section 4.5 / Eq. (16). These are what the
     manuscript actually describes.
@@ -87,8 +94,21 @@ def mwb_auc_block(
 
 
 def released_band_mass(bm, matrix: np.ndarray, frac: float = 0.10) -> float:
-    """The released integer-window Band@10%, via `_benchmark_utils.diagonal_band_mass`."""
-    return float(bm.diagonal_band_mass(matrix, frac))
+    """The released integer-window Band@10%.
+
+    The benchmark renamed this function from ``diagonal_band_mass`` to
+    ``legacy_integer_band_mass`` in the paper-spec metrics commit, with no alias.
+    Resolving the name at call time keeps Table A reproducible against either
+    revision.
+    """
+    for name in ("legacy_integer_band_mass", "diagonal_band_mass"):
+        fn = getattr(bm, name, None)
+        if fn is not None:
+            return float(fn(matrix, frac))
+    raise AttributeError(
+        "loaded benchmark module exposes neither legacy_integer_band_mass nor "
+        "diagonal_band_mass"
+    )
 
 
 def released_mwb_auc(bm, matrix: np.ndarray, widths=DEFAULT_WIDTH_GRID) -> float:

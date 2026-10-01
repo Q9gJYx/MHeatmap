@@ -1,17 +1,26 @@
-"""Component-wise spectral ordering for MHeatMap (paper Section 3.3).
+"""Single-vector baseline and component census for MHeatMap (paper Section 3.3).
 
-The released benchmark (`main_experiment/synthetic_benchmark/_benchmark_utils.py`)
-orders a *single* Fiedler vector of the whole active-support Laplacian. Section 3.3
-of the paper specifies something different:
+The benchmark originally ordered a *single* Fiedler vector of the whole
+active-support Laplacian. Section 3.3 of the paper specifies something different:
 
     "If the active support has several connected components, we order each
      component independently, arrange components by decreasing total mass, and
      append zero-marginal rows and columns in their original order."
 
-This module implements that procedure. It reuses the released conventions
-(`two_walk_laplacian`, `copermute_from_bipermute`, `orient_orders_for_diagonal`)
-so that when the active support has exactly one connected component the output is
-identical to the released code -- see `run_components_audit.py` for the self-check.
+`_benchmark_utils.py` in the repository now **implements Section 3.3 natively**
+(`_componentwise_spectral_reorder`, used by `one_walk_reorder` and
+`tw_alpha_reorder`), so that is the canonical procedure and
+`order_componentwise` below simply delegates to it. This module is the audit
+layer around it, and keeps two things the benchmark does not provide:
+
+``order_single``
+    The pre-fix behaviour -- one Fiedler vector over the whole active support,
+    with the released `orient_orders_for_diagonal` step. This is the "as
+    submitted" baseline of record, and is the only remaining implementation of
+    it, so Table A depends on it.
+
+``support_components`` / ``component_table``
+    The per-component census (count, shape, mass) used by the audit table.
 
 Modes
 -----
@@ -49,7 +58,11 @@ def _load_module(name: str, path: Path):
 # Reuse the released baselines/metrics rather than reimplementing them.
 bm = _load_module("_benchmark_utils", SYNTHETIC_DIR / "_benchmark_utils.py")
 
-from mheatmap.graph import copermute_from_bipermute, two_walk_laplacian  # noqa: E402
+from mheatmap.graph import (  # noqa: E402
+    copermute_from_bipermute,
+    spectral_permute,
+    two_walk_laplacian,
+)
 
 EIGEN_TOL = 1e-10
 
@@ -142,11 +155,54 @@ def _fiedler_bipermutation(sub: np.ndarray, alpha: float, mode: str) -> np.ndarr
     return np.argsort(eigenvectors[:, positive[0]])
 
 
+def _recover_column_order(
+    original_matrix: np.ndarray,
+    row_order: np.ndarray,
+    reordered_matrix: np.ndarray,
+) -> np.ndarray:
+    """Submitted helper: match permuted columns back to their originals by value."""
+    row_reordered_original = original_matrix[row_order, :]
+
+    column_lookup: dict[bytes, list[int]] = {}
+    for col_index in range(row_reordered_original.shape[1]):
+        key = np.ascontiguousarray(row_reordered_original[:, col_index]).tobytes()
+        column_lookup.setdefault(key, []).append(col_index)
+
+    recovered = []
+    for col_index in range(reordered_matrix.shape[1]):
+        key = np.ascontiguousarray(reordered_matrix[:, col_index]).tobytes()
+        matches = column_lookup.get(key)
+        if not matches:
+            raise ValueError("could not recover reordered column order from matrix")
+        recovered.append(matches.pop(0))
+    return np.array(recovered, dtype=int)
+
+
+def _submitted_tw_alpha1(matrix: np.ndarray):
+    """The submitted Two-Walk path at alpha = 1.
+
+    The submitted `tw_reorder_for_alpha` short-circuited alpha == 1 to the external
+    `mheatmap.graph.spectral_permute`, whose preprocessing prunes rows below
+    ``1e-3`` of the total, and then recovered the column order by matching permuted
+    column vectors. Every alpha > 1 took a different, local code path. A baseline
+    claiming to be "as submitted" has to reproduce that split rather than
+    approximate it, otherwise its alpha selection is not the submitted one.
+    """
+    row_labels = np.arange(matrix.shape[0], dtype=int)
+    tw_matrix, tw_row_labels = spectral_permute(matrix, row_labels, mode="tw")
+    row_order = tw_row_labels.astype(int)
+    col_order = _recover_column_order(matrix, row_order, tw_matrix)
+    return bm.orient_orders_for_diagonal(matrix, row_order, col_order)
+
+
 def order_single(matrix: np.ndarray, alpha: float = 1.0, mode: str = "tw"):
     """Released behaviour: one Fiedler vector over the whole active support.
 
     Kept as the baseline of record for Table 1; see module docstring.
     """
+    if mode == "tw" and abs(alpha - 1.0) <= 1e-12:
+        return _submitted_tw_alpha1(matrix)
+
     n_rows, n_cols = matrix.shape
     active_rows, active_cols, sub = active_submatrix(matrix)
     if sub.size == 0:
@@ -160,48 +216,26 @@ def order_single(matrix: np.ndarray, alpha: float = 1.0, mode: str = "tw"):
 
 
 def order_componentwise(matrix: np.ndarray, alpha: float = 1.0, mode: str = "tw"):
-    """Paper Section 3.3: order each component, arrange by decreasing mass."""
-    n_rows, n_cols = matrix.shape
-    active_rows, active_cols, sub = active_submatrix(matrix)
-    if sub.size == 0:
-        return np.arange(n_rows), np.arange(n_cols)
+    """Paper Section 3.3, via the benchmark's canonical implementation.
 
-    ordered_rows: list[np.ndarray] = []
-    ordered_cols: list[np.ndarray] = []
-    for component in support_components(matrix):
-        local = np.ix_(component.row_indices, component.col_indices)
-        block = matrix[local].astype(float)
-        peak = block.max()
-        if peak > 0:
-            block = block / peak
-        bipermutation = _fiedler_bipermutation(block, alpha, mode)
-        local_rows, local_cols = copermute_from_bipermute(
-            [component.n_rows, component.n_cols],
-            np.arange(component.n_rows),
-            np.arange(component.n_cols),
-            bipermutation,
-        )
-        ordered_rows.append(component.row_indices[local_rows])
-        ordered_cols.append(component.col_indices[local_cols])
+    Delegates to `_benchmark_utils`, which owns the procedure. Two conventions
+    differ from the local implementation this module used to carry, and the
+    benchmark's are authoritative:
 
-    zero_rows = np.setdiff1d(np.arange(n_rows), active_rows, assume_unique=True)
-    zero_cols = np.setdiff1d(np.arange(n_cols), active_cols, assume_unique=True)
-    row_order = np.concatenate(ordered_rows + [zero_rows])
-    col_order = np.concatenate(ordered_cols + [zero_cols])
-
-    _assert_permutation(row_order, n_rows)
-    _assert_permutation(col_order, n_cols)
-    return bm.orient_orders_for_diagonal(matrix, row_order, col_order)
-
-
-def _assert_permutation(order: np.ndarray, size: int) -> None:
-    """Guards the active-index -> global-index mapping: a silent mismatch here
-    yields a malformed 'order' that still looks plausible in aggregate metrics."""
-    if order.size != size or np.unique(order).size != size:
-        raise AssertionError(
-            f"order is not a permutation of range({size}): size={order.size}, "
-            f"unique={np.unique(order).size}"
-        )
+    * components are normalised by the *global* matrix maximum rather than
+      renormalised per block (this moves Two-Walk only -- the One-Walk
+      combinatorial Laplacian is scale-homogeneous);
+    * the assembled order is *not* re-oriented by `orient_orders_for_diagonal`,
+      which searched four row/column reversals and kept the lowest 2-SUM. That
+      search minimised the metric being reported, so its removal is deliberate.
+    """
+    if mode == "ow":
+        result = bm.one_walk_reorder(matrix)
+    elif mode == "tw":
+        result = bm.tw_alpha_reorder(matrix, alpha=float(alpha))
+    else:
+        raise ValueError(f"unknown mode {mode!r}; expected 'tw' or 'ow'")
+    return result.row_order, result.col_order
 
 
 def component_table(matrix: np.ndarray) -> list[dict]:

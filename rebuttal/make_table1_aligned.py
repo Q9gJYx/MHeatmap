@@ -1,20 +1,40 @@
 """Emit Table 1 in the paper's layout, as-submitted and corrected.
 
-Produces three markdown tables over the seven real matrices, each with the same
+Produces markdown tables over the seven real matrices, each with the same
 row/column structure as Table 1 of the manuscript (rows = datasets, column
-groups = metrics, within each group = the seven methods):
+groups = metrics, within each group = the eight methods -- the manuscript's seven
+plus Gram-OW, the reviewer XFNF W5 baseline):
 
-  A. As submitted   -- released orderings (single Fiedler vector) and released
+  A. As submitted   -- single Fiedler vector for One-walk and Two-walk, released
                        metric definitions. Must reproduce the committed CSV; the
                        script checks this and reports any drift.
   B. Corrected      -- Section 3.3 component-wise ordering for One-walk and
-                       Two-walk, alpha selected by the paper-faithful block-cut
-                       MWB-AUC, metrics under the paper-faithful definitions.
-  C. Delta          -- B - A, so the effect of the correction is visible per cell.
+                       Two-walk, metrics under the paper-faithful definitions
+                       (Eq. 16 Band@10%, Section 4.5 block-cut MWB-AUC).
+  C. Reproduction   -- A against the *submitted* CSV, B against the *current* one.
+  D. Alpha          -- the alpha each MWB-AUC selector picks: the legacy band
+                       integral the code actually uses, versus the block-cut
+                       quantity Section 4.5 describes.
+
+The two tables are checked against different baselines on purpose. A is the code
+as submitted, so it reproduces the CSV at the pre-fix revision (SUBMITTED_REV); B
+is the corrected code, so it reproduces the working-tree CSV.
+
+Both tables select alpha with the *released* MWB-AUC, because that is what the
+repository's adaptive Two-walk actually uses and what produced the committed CSV.
+
+Table A cannot be built from `bm.one_walk_reorder` / `bm.tw_auto_reorder` any
+more: the benchmark's paper-spec commit turned those into the Section 3.3
+component-wise procedure, so using them would make A identical to B and destroy
+the contrast this document exists to show. A comes from
+`tw_components.order_single`, the surviving implementation of the pre-fix
+behaviour.
 
 Original / Marginal / HC+OLO / CA-SVD / Median do not use the Fiedler pipeline,
 so their orderings are unchanged by the correction; only their metric values move
 under the corrected definitions. One-walk and Two-walk change in both respects.
+Gram-OW is new here rather than corrected: it was never in the submitted table, and
+it keeps one ordering across A and B like the other non-adaptive methods.
 
 Run:
     cd MHeatMap/src
@@ -26,6 +46,8 @@ from __future__ import annotations
 import argparse
 import csv
 import glob
+import io
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -34,6 +56,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import baselines_v2 as bv  # noqa: E402
 import metrics_v2 as mv  # noqa: E402
 import tw_components as tc  # noqa: E402
 
@@ -53,8 +76,14 @@ COMMITTED_CSV = (
     / "real_world_benchmark"
     / "real_world_benchmark_paper.csv"
 )
+# The benchmark as submitted, before the paper-spec metric and ordering fixes.
+# Table A is that code, so that is the CSV it should reproduce.
+SUBMITTED_REV = "445334d"
 
-METHODS = ("Original", "Marginal", "HC+OLO", "One-walk", "CA-SVD", "Median", "TW")
+# `Gram-OW` is the reviewer XFNF W5 baseline (see `baselines_v2`). It sits next to
+# One-walk and Two-walk because that is the comparison it exists to serve.
+METHODS = ("Original", "Marginal", "HC+OLO", "One-walk", "Gram-OW", "CA-SVD", "Median", "TW")
+METHOD_SHORT = ("O", "M", "HC", "OW", "GO", "CA", "MD", "TW")
 ALPHAS = (1.0, 2.0, 4.0, 6.0, 8.0, 12.0)
 WIDTHS = tc.bm.DEFAULT_WIDTH_GRID
 
@@ -77,12 +106,18 @@ def _orders(result) -> tuple[np.ndarray, np.ndarray]:
 
 
 def baseline_orderings(matrix: np.ndarray) -> dict[str, tuple[np.ndarray, np.ndarray]]:
-    """The five non-spectral baselines. Unchanged by the component correction."""
+    """The orderings shared by tables A and B.
+
+    The five non-spectral baselines plus Gram-OW. None of them goes through the
+    adaptive Two-walk path, so the single-vector -> component-wise correction leaves
+    their orderings alone and only their metric values move between A and B.
+    """
     n_rows, n_cols = matrix.shape
     return {
         "Original": (np.arange(n_rows), np.arange(n_cols)),
         "Marginal": _orders(tc.bm.marginal_sort_reorder(matrix)),
         "HC+OLO": _orders(tc.bm.hierarchical_olo_reorder(matrix)),
+        "Gram-OW": bv.gram_one_walk_order(matrix),
         "CA-SVD": _orders(tc.bm.ca_svd_reorder(matrix, widths=WIDTHS)),
         "Median": _orders(tc.bm.median_reorder(matrix, widths=WIDTHS)),
     }
@@ -136,23 +171,26 @@ def build_rows(datasets: dict[str, np.ndarray]):
         baseline = baseline_orderings(matrix)
 
         # --- A: as submitted -------------------------------------------------
-        ow_released = _orders(tc.bm.one_walk_reorder(matrix))
-        tw_result = tc.bm.tw_auto_reorder(matrix, alphas=ALPHAS, widths=WIDTHS)
+        # `tc.order_single` is the single-Fiedler baseline of record. It must not
+        # be `bm.one_walk_reorder` / `bm.tw_auto_reorder`: those are now the
+        # Section 3.3 component-wise procedure, i.e. Table B.
+        submitted_alpha, tw_submitted = tw_adaptive(matrix, tc.order_single, _select_released)
         submitted_orderings = dict(baseline)
-        submitted_orderings["One-walk"] = ow_released
-        submitted_orderings["TW"] = _orders(tw_result.reorder)
+        submitted_orderings["One-walk"] = tc.order_single(matrix, 1.0, "ow")
+        submitted_orderings["TW"] = tw_submitted
 
         as_submitted[label] = {
             method: metric_triple(matrix, *submitted_orderings[method], "released")
             for method in METHODS
         }
-        alphas.setdefault(label, {})["as submitted"] = tw_result.alpha
+        alphas.setdefault(label, {})["as submitted"] = submitted_alpha
 
         # --- B: corrected ----------------------------------------------------
-        ow_comp = tc.order_componentwise(matrix, 0.0, "ow")
-        best_alpha, tw_comp = tw_adaptive(matrix, tc.order_componentwise, _select_block)
+        # Alpha is selected by the released MWB-AUC in both tables, matching the
+        # adaptive procedure the repository actually runs.
+        best_alpha, tw_comp = tw_adaptive(matrix, tc.order_componentwise, _select_released)
         corrected_orderings = dict(baseline)
-        corrected_orderings["One-walk"] = ow_comp
+        corrected_orderings["One-walk"] = tc.order_componentwise(matrix, 0.0, "ow")
         corrected_orderings["TW"] = tw_comp
 
         corrected[label] = {
@@ -161,13 +199,17 @@ def build_rows(datasets: dict[str, np.ndarray]):
         }
         alphas[label]["corrected"] = best_alpha
 
+        # --- D: what the paper-as-written selector would have chosen ---------
+        block_alpha, _ = tw_adaptive(matrix, tc.order_componentwise, _select_block)
+        alphas[label]["block-cut"] = block_alpha
+
     return as_submitted, corrected, alphas
 
 
 def _table(title: str, rows: dict, alphas: dict, note: str, alpha_key: str) -> list[str]:
     metrics = ("2-SUM", "Band@10%", "MWB-AUC")
     header = "| Dataset | Shape | " + " | ".join(
-        f"{m} {short}" for m in metrics for short in ("O", "M", "HC", "OW", "CA", "MD", "TW")
+        f"{m} {short}" for m in metrics for short in METHOD_SHORT
     ) + " | alpha |"
     separator = "|---|---|" + "---:|" * (len(metrics) * len(METHODS)) + "---:|"
 
@@ -190,6 +232,39 @@ def _table(title: str, rows: dict, alphas: dict, note: str, alpha_key: str) -> l
         alpha_text = "-" if alpha is None else f"{alpha:g}"
         lines.append(
             f"| {label} | {SHAPES[label]} | " + " | ".join(cells) + f" | {alpha_text} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _alpha_section(alphas: dict) -> list[str]:
+    """Section D: alpha under the legacy selector versus the block-cut one.
+
+    Kept compact on purpose -- the point is whether the choice moves, not to be a
+    third full metric table.
+    """
+    def fmt(value) -> str:
+        return "-" if value is None else f"{value:g}"
+
+    lines = [
+        "## D. Alpha selection under each MWB-AUC definition",
+        "",
+        "Section 4.5 describes MWB-AUC as a matched contiguous block-cut quantity, "
+        "but the repository's adaptive Two-walk selects alpha with the legacy "
+        "integer-window band integral. This shows whether adopting the "
+        "paper-as-written selector would have changed the choice.",
+        "",
+        "| Dataset | As submitted | Corrected, legacy selector | Corrected, block-cut selector |",
+        "|---|---:|---:|---:|",
+    ]
+    for key in DATASET_ORDER:
+        label = DATASET_LABELS[key]
+        if label not in alphas:
+            continue
+        row = alphas[label]
+        lines.append(
+            f"| {label} | {fmt(row.get('as submitted'))} "
+            f"| {fmt(row.get('corrected'))} | {fmt(row.get('block-cut'))} |"
         )
     lines.append("")
     return lines
@@ -219,22 +294,34 @@ def main() -> None:
     as_submitted, corrected, alphas = build_rows(datasets)
     print(f"  done in {time.perf_counter() - started:.1f}s")
 
-    compare = _compare_with_committed(as_submitted)
+    compare = _reproduction_check(as_submitted, corrected)
 
     lines = [
         "# Table 1 -- aligned with the manuscript",
         "",
         "Column groups are the three metrics; within each group the method order",
-        "matches Table 1: O = Original, M = Marginal, HC = HC+OLO, OW = One-walk,",
-        "CA = CA-SVD, MD = Median, TW = Two-walk. Bold marks the best value per row",
-        "and metric. Row order follows Table 1.",
+        "matches Table 1 with one addition: O = Original, M = Marginal, HC = HC+OLO,",
+        "OW = One-walk, GO = Gram-OW, CA = CA-SVD, MD = Median, TW = Two-walk. Bold",
+        "marks the best value per row and metric. Row order follows Table 1.",
+        "",
+        "`Gram-OW` is the baseline reviewer XFNF W5 asked for: one-walk Laplacian",
+        "reordering applied separately to `B B^T` (row order) and `B^T B` (column",
+        "order). Because the two axes are solved as independent eigenproblems, their",
+        "relative reversal is a free choice that the joint One-walk/Two-walk",
+        "eigenvector cannot express. It is resolved here with the released",
+        "`orient_orders_for_diagonal` rule -- try four reversals, keep the lowest",
+        "2-SUM -- which is deliberately *more* generous than the treatment OW and TW",
+        "receive in table B, where that metric-fitted step was removed. Gram-OW is",
+        "therefore, if anything, flattered by this table. See `baselines_v2.py`.",
         "",
     ]
     lines += _table(
         "A. As submitted",
         as_submitted,
         alphas,
-        "Released orderings and released metric definitions. Reproduces Table 1.",
+        "The submitted code: one Fiedler vector over the whole active support, "
+        "finished with `orient_orders_for_diagonal` and an unstable sort, under the "
+        f"released metric definitions. Should reproduce the `{SUBMITTED_REV}` table.",
         "as submitted",
     )
     lines += _table(
@@ -242,57 +329,128 @@ def main() -> None:
         corrected,
         alphas,
         "Section 3.3 component-wise ordering for OW and TW, alpha chosen by the "
-        "block-cut MWB-AUC, and the paper-faithful metric definitions "
-        "(Eq. 16 Band@10%, Section 4.5 block-cut MWB-AUC). Baselines keep their "
-        "orderings; only their metric values move.",
+        "released MWB-AUC (the selector the repository actually runs), and the "
+        "paper-faithful metric definitions (Eq. 16 Band@10%, Section 4.5 "
+        "block-cut MWB-AUC). Baselines keep their orderings; only their metric "
+        "values move.",
         "corrected",
     )
     lines += ["## C. Reproduction check", ""]
     lines += compare
+    lines += _alpha_section(alphas)
 
     path = OUTPUT_DIR / "table1_aligned.md"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"\nWrote {path}")
 
 
-def _compare_with_committed(as_submitted: dict) -> list[str]:
-    """Table A should match the committed CSV; report any cell that does not."""
-    if not COMMITTED_CSV.exists():
-        return ["Committed CSV not found; skipped."]
-    committed = {}
-    with COMMITTED_CSV.open(encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            committed[row["dataset"].strip()] = row
+def _read_csv_rows(text: str) -> dict[str, dict[str, str]]:
+    return {row["dataset"].strip(): row for row in csv.DictReader(io.StringIO(text))}
 
-    label_to_key = {label: key for key, label in DATASET_LABELS.items()}
-    worst = []
-    for label, methods in as_submitted.items():
-        # Committed CSV keys differ in punctuation; match on the leading token.
+
+def _submitted_rows() -> dict[str, dict[str, str]] | None:
+    """The submitted CSV, read from git. None when that revision is unavailable."""
+    rel = COMMITTED_CSV.relative_to(tc.REPO_ROOT).as_posix()
+    try:
+        proc = subprocess.run(
+            ["git", "show", f"{SUBMITTED_REV}:{rel}"],
+            cwd=tc.REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return None
+    return _read_csv_rows(proc.stdout)
+
+
+def _compare(rows: dict, committed: dict, columns, tolerance: float = 5e-3) -> list[str]:
+    """Cells of `rows` that differ from `committed` beyond `tolerance`."""
+    drift = []
+    for label, methods in rows.items():
+        # CSV keys differ in punctuation from the table labels; match the lead token.
         lead = label.split()[0]
         match = next((k for k in committed if k.split()[0] == lead), None)
         if match is None:
-            worst.append(f"- {label}: no committed row found")
+            drift.append(f"- {label}: no matching row in the reference CSV")
             continue
-        for method, metric, column in (
-            ("One-walk", "2-SUM", "two_sum|One-walk"),
-            ("TW", "2-SUM", "two_sum|TW"),
-            ("One-walk", "MWB-AUC", "mwb_auc|One-walk"),
-            ("TW", "MWB-AUC", "mwb_auc|TW"),
-        ):
-            mine = as_submitted[label][method][metric]
-            # The committed CSV already stores 2-SUM at the x100 scale used in Table 1.
+        for method, metric, column in columns:
+            mine = methods[method][metric]
             theirs = float(committed[match][column])
-            if abs(mine - theirs) > 5e-3:
-                worst.append(
-                    f"- {label} | {method} | {metric}: ours {mine:.4f} vs committed {theirs:.4f}"
+            if abs(mine - theirs) > tolerance:
+                drift.append(
+                    f"- {label} | {method} | {metric}: ours {mine:.4f} "
+                    f"vs reference {theirs:.4f}"
                 )
-    if not worst:
-        return [
-            "Table A reproduces the committed CSV for the checked cells "
-            "(One-walk and TW under 2-SUM and MWB-AUC) to within 5e-3.",
-            "",
-        ]
-    return ["Cells that differ from the committed CSV:", ""] + worst + [""]
+    return drift
+
+
+# A is the submitted code under the released metric definitions, so all three
+# columns are comparable with the submitted CSV. B is the corrected code under the
+# paper-faithful definitions, so its MWB-AUC column is the block-cut quantity and
+# is deliberately not compared.
+_SUBMITTED_COLUMNS = tuple(
+    (method, metric, column)
+    for method, key in (("One-walk", "One-walk"), ("TW", "TW"))
+    for metric, column in (
+        ("2-SUM", f"two_sum|{key}"),
+        ("Band@10%", f"band_mass_10|{key}"),
+        ("MWB-AUC", f"mwb_auc|{key}"),
+    )
+)
+_CORRECTED_COLUMNS = tuple(
+    (method, metric, column)
+    for method, key in (("One-walk", "One-walk"), ("TW", "TW"))
+    for metric, column in (
+        ("2-SUM", f"two_sum|{key}"),
+        ("Band@10%", f"band_mass_10|{key}"),
+    )
+)
+
+
+def _reproduction_check(as_submitted: dict, corrected: dict) -> list[str]:
+    """A against the submitted CSV, B against the working-tree CSV."""
+    lines: list[str] = []
+
+    lines += [
+        f"### A. As submitted vs the `{SUBMITTED_REV}` CSV",
+        "",
+        "The submitted code should reproduce its own table. All seven datasets are",
+        "checked; a mismatch on One-walk or Two-walk means the single-vector",
+        "baseline here has drifted from the released behaviour.",
+        "",
+    ]
+    submitted = _submitted_rows()
+    if submitted is None:
+        lines += [f"Revision `{SUBMITTED_REV}` not available; skipped.", ""]
+    else:
+        drift = _compare(as_submitted, submitted, _SUBMITTED_COLUMNS)
+        lines += (
+            ["All checked cells reproduce the submitted CSV to within 5e-3.", ""]
+            if not drift
+            else ["Cells that differ:", ""] + drift + [""]
+        )
+
+    lines += [
+        "### B. Corrected vs the current CSV",
+        "",
+        "The corrected ordering pipeline should reproduce the repository's current",
+        "table exactly on the shared columns. MWB-AUC is excluded because Table B",
+        "reports the Section 4.5 block-cut quantity while the CSV carries the",
+        "selector's band integral.",
+        "",
+    ]
+    if not COMMITTED_CSV.exists():
+        lines += ["Working-tree CSV not found; skipped.", ""]
+    else:
+        current = _read_csv_rows(COMMITTED_CSV.read_text(encoding="utf-8"))
+        drift = _compare(corrected, current, _CORRECTED_COLUMNS)
+        lines += (
+            ["All checked cells reproduce the current CSV to within 5e-3.", ""]
+            if not drift
+            else ["Cells that differ:", ""] + drift + [""]
+        )
+    return lines
 
 
 if __name__ == "__main__":
