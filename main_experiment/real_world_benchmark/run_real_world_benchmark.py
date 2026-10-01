@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 sys.modules.setdefault("numexpr", None)
@@ -21,11 +22,11 @@ from _benchmark_utils import (
     DEFAULT_WIDTH_GRID,
     ReorderResult,
     ca_svd_reorder,
-    diagonal_band_mass,
     hierarchical_olo_reorder,
     marginal_sort_reorder,
     median_reorder,
     mwb_auc,
+    normalized_band_mass,
     normalized_two_sum,
     one_walk_reorder,
     tw_auto_reorder,
@@ -84,6 +85,7 @@ def save_paper_table(records: list[dict[str, object]]) -> None:
     paper.loc[:, csv_columns].to_csv(
         OUTPUT_DIR / "real_world_benchmark_paper.csv",
         index=False,
+        lineterminator="\n",
     )
 
     md_lines = [
@@ -108,6 +110,7 @@ def save_paper_table(records: list[dict[str, object]]) -> None:
     (OUTPUT_DIR / "real_world_benchmark_paper.md").write_text(
         "\n".join(md_lines) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -125,6 +128,7 @@ def main() -> None:
 
     records: list[dict[str, object]] = []
     for dataset_index, dataset in enumerate(datasets):
+        dataset_started = time.perf_counter()
         original_matrix = dataset.matrix
         results: dict[str, ReorderResult] = {
             "Original": ReorderResult(
@@ -149,10 +153,16 @@ def main() -> None:
                     "method": method,
                     "shape": f"{matrix.shape[0]}x{matrix.shape[1]}",
                     "two_sum": normalized_two_sum(matrix),
-                    "band_mass_10": diagonal_band_mass(matrix, 0.10),
+                    "band_mass_10": normalized_band_mass(matrix, 0.10),
                     "mwb_auc": mwb_auc(matrix, DEFAULT_WIDTH_GRID),
                 }
             )
+        print(
+            f"{dataset.name}: alpha={tw_auto.alpha:g}, "
+            f"components={tw_auto.reorder.component_count}, "
+            f"{time.perf_counter() - dataset_started:.1f}s",
+            flush=True,
+        )
 
     save_paper_table(records)
 

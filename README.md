@@ -58,6 +58,30 @@ ordering (`HC`), One-walk bipartite spectral (`OW`), CA-SVD (`CA`),
 Alternating weighted median (`MD`), and adaptive Two-Walk (`TW`). Adaptive TW
 selects α from `{1, 2, 4, 6, 8, 12}` per matrix by maximizing internal MWB-AUC.
 
+#### Corrected metric and ordering definitions
+
+- **Band@10%** implements Equation (16): row and column ranks are mapped to
+  `i / (m - 1)` and `j / (n - 1)`, and the score is the fraction of total mass
+  with normalized coordinate distance at most `0.10`.
+- **MWB-AUC** retains the submitted alpha selector. It is the normalized
+  trapezoidal integral of the legacy integer-index diagonal-band mass over 25
+  widths from `0.02` through `0.50`; it is not a matched-block-cut metric.
+- **OW/TW component handling** follows the manuscript specification. The
+  active matrix is normalized once by its global maximum, each positive-support
+  component is ordered independently, components are concatenated by decreasing
+  raw mass, and zero-marginal axes are appended in original order. Every
+  positive alpha, including `alpha=1`, follows the same TW path.
+- Each TW component delegates its Laplacian construction to
+  `mheatmap.graph.two_walk_laplacian` from the pinned package. Component
+  discovery, global normalization, deterministic Fiedler orientation, stable
+  sorting, and concatenation are benchmark-level responsibilities.
+
+Run the paper-specification regression tests with:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
+
 ### Reproduce qualitative figures
 
 **Figure 1 (teaser) and the real-world four-panel figures:**

@@ -8,37 +8,63 @@ from pathlib import Path
 import numpy as np
 from scipy.cluster.hierarchy import leaves_list, linkage, optimal_leaf_ordering
 from scipy.linalg import eigh
+from scipy.sparse import bmat, csr_matrix
+from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import svds
 from scipy.spatial.distance import pdist
 
 sys.modules.setdefault("numexpr", None)
 
 from mheatmap.graph import (
-    copermute_from_bipermute,
-    spectral_permute,
-    two_walk_laplacian,
+    two_walk_laplacian as mheatmap_two_walk_laplacian,
 )
 
 DEFAULT_WIDTH_GRID = np.linspace(0.02, 0.50, 25)
 EPS = 1e-12
 
 
-def diagonal_band_mass(matrix: np.ndarray, frac: float) -> float:
-    total = float(matrix.sum())
+def normalized_band_mass(matrix: np.ndarray, tau: float) -> float:
+    """Equation (16): mass with normalized coordinate distance <= ``tau``."""
+    if not 0.0 <= tau <= 1.0:
+        raise ValueError(f"tau must lie in [0, 1], got {tau!r}")
+
+    values = _validate_nonnegative_matrix(matrix)
+    total = float(values.sum())
     if total <= 0:
         return 0.0
 
-    n_rows, n_cols = matrix.shape
-    band = max(1, int(frac * min(n_rows, n_cols)))
-    score = 0.0
+    n_rows, n_cols = values.shape
+    row_positions = _normalized_positions(n_rows)
+    col_positions = _normalized_positions(n_cols)
+    prefix = np.pad(np.cumsum(values, axis=1), ((0, 0), (1, 0)))
+    retained = 0.0
+
+    for row_index, row_position in enumerate(row_positions):
+        start = int(np.searchsorted(col_positions, row_position - tau, side="left"))
+        stop = int(np.searchsorted(col_positions, row_position + tau, side="right"))
+        retained += float(prefix[row_index, stop] - prefix[row_index, start])
+
+    return retained / total
+
+
+def legacy_integer_band_mass(matrix: np.ndarray, width: float) -> float:
+    """Integer-index diagonal-band score used by the submitted MWB selector."""
+    values = _validate_nonnegative_matrix(matrix)
+    total = float(values.sum())
+    if total <= 0:
+        return 0.0
+
+    n_rows, n_cols = values.shape
+    band = max(1, int(width * min(n_rows, n_cols)))
+    retained = 0.0
 
     for row_index in range(n_rows):
         center = row_index * n_cols / n_rows
         start = max(0, int(np.floor(center - band)))
         stop = min(n_cols, int(np.ceil(center + band + 1)))
-        score += float(matrix[row_index, start:stop].sum())
+        retained += float(values[row_index, start:stop].sum())
 
-    return score / total
+    return retained / total
 
 
 @dataclass(frozen=True)
@@ -46,6 +72,8 @@ class ReorderResult:
     matrix: np.ndarray
     row_order: np.ndarray
     col_order: np.ndarray
+    component_count: int | None = None
+    component_masses: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -72,28 +100,6 @@ def apply_orders(
     return matrix[row_order][:, col_order]
 
 
-def recover_column_order(
-    original_matrix: np.ndarray,
-    row_order: np.ndarray,
-    reordered_matrix: np.ndarray,
-) -> np.ndarray:
-    row_reordered_original = original_matrix[row_order, :]
-
-    column_lookup: dict[bytes, list[int]] = {}
-    for col_index in range(row_reordered_original.shape[1]):
-        key = np.ascontiguousarray(row_reordered_original[:, col_index]).tobytes()
-        column_lookup.setdefault(key, []).append(col_index)
-
-    recovered = []
-    for col_index in range(reordered_matrix.shape[1]):
-        key = np.ascontiguousarray(reordered_matrix[:, col_index]).tobytes()
-        matches = column_lookup.get(key)
-        if not matches:
-            raise ValueError("Could not recover reordered column order from matrix.")
-        recovered.append(matches.pop(0))
-    return np.array(recovered, dtype=int)
-
-
 def normalized_two_sum(matrix: np.ndarray) -> float:
     total = float(np.sum(matrix))
     if total <= 0:
@@ -110,8 +116,42 @@ def normalized_two_sum(matrix: np.ndarray) -> float:
 
 
 def mwb_auc(matrix: np.ndarray, widths: np.ndarray) -> float:
-    scores = np.array([diagonal_band_mass(matrix, width) for width in widths])
-    return float(np.trapezoid(scores, widths) / (widths[-1] - widths[0]))
+    """Retained submitted selector: normalized AUC of legacy band mass.
+
+    This is a multi-width diagonal-band integral, not the matched-block-cut
+    quantity described in the submitted manuscript.  Keeping it here isolates
+    the metric and component corrections from a simultaneous change in alpha
+    selection policy.
+    """
+    grid = np.asarray(widths, dtype=float)
+    if grid.ndim != 1 or len(grid) < 2:
+        raise ValueError("widths must be a one-dimensional grid with >=2 values")
+    if not np.all(np.diff(grid) > 0):
+        raise ValueError("widths must be strictly increasing")
+    scores = np.array(
+        [legacy_integer_band_mass(matrix, float(width)) for width in grid],
+        dtype=float,
+    )
+    return float(np.trapezoid(scores, grid) / (grid[-1] - grid[0]))
+
+
+def _normalized_positions(length: int) -> np.ndarray:
+    if length < 1:
+        raise ValueError("matrix axes must be nonempty")
+    if length == 1:
+        return np.zeros(1, dtype=float)
+    return np.arange(length, dtype=float) / float(length - 1)
+
+
+def _validate_nonnegative_matrix(matrix: np.ndarray) -> np.ndarray:
+    values = np.asarray(matrix, dtype=float)
+    if values.ndim != 2 or 0 in values.shape:
+        raise ValueError("matrix must be nonempty and two-dimensional")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("matrix must contain only finite values")
+    if np.any(values < 0):
+        raise ValueError("matrix must be nonnegative")
+    return values
 
 
 def orient_orders_for_diagonal(
@@ -412,41 +452,158 @@ def hierarchical_olo_reorder(matrix: np.ndarray) -> ReorderResult:
     )
 
 
-def one_walk_reorder(matrix: np.ndarray) -> ReorderResult:
-    rows, cols = matrix.shape
-    row_sums = np.sum(matrix, axis=1)
-    col_sums = np.sum(matrix, axis=0)
-    nonzero_rows = np.where(row_sums > 0)[0]
-    nonzero_cols = np.where(col_sums > 0)[0]
+def support_component_count(matrix: np.ndarray) -> int:
+    """Return the number of components in the active positive-support graph."""
+    values = _validate_nonnegative_matrix(matrix)
+    active_rows = np.flatnonzero(values.sum(axis=1) > 0)
+    active_cols = np.flatnonzero(values.sum(axis=0) > 0)
+    if len(active_rows) == 0 or len(active_cols) == 0:
+        return 0
+    _, count = _active_support_labels(values, active_rows, active_cols)
+    return count
 
-    if len(nonzero_rows) == 0 or len(nonzero_cols) == 0:
-        row_order = np.arange(rows, dtype=int)
-        col_order = np.arange(cols, dtype=int)
-        return ReorderResult(matrix.copy(), row_order, col_order)
 
-    B_sub = matrix[np.ix_(nonzero_rows, nonzero_cols)].astype(float)
-    if np.max(B_sub) > 0:
-        B_sub = B_sub / np.max(B_sub)
-
-    zeros_rr = np.zeros((B_sub.shape[0], B_sub.shape[0]), dtype=float)
-    zeros_cc = np.zeros((B_sub.shape[1], B_sub.shape[1]), dtype=float)
-    adjacency = np.block([[zeros_rr, B_sub], [B_sub.T, zeros_cc]])
-    degree = np.diag(np.sum(adjacency, axis=1))
-    laplacian = degree - adjacency
-    eigenvalues, eigenvectors = eigh(laplacian)
-    fiedler_index = np.where(np.abs(eigenvalues) > 1e-10)[0][0]
-    bipartite_order = np.argsort(eigenvectors[:, fiedler_index])
-    row_order, col_order = copermute_from_bipermute(
-        [rows, cols],
-        nonzero_rows,
-        nonzero_cols,
-        bipartite_order,
+def _active_support_labels(
+    values: np.ndarray,
+    active_rows: np.ndarray,
+    active_cols: np.ndarray,
+) -> tuple[np.ndarray, int]:
+    support = csr_matrix(values[np.ix_(active_rows, active_cols)] > 0)
+    adjacency = bmat([[None, support], [support.T, None]], format="csr")
+    count, labels = connected_components(
+        adjacency,
+        directed=False,
+        return_labels=True,
     )
-    row_order, col_order = orient_orders_for_diagonal(matrix, row_order, col_order)
+    return labels, int(count)
+
+
+def _orient_fiedler(vector: np.ndarray) -> np.ndarray:
+    """Orient a Fiedler vector by its first maximum-absolute coordinate."""
+    oriented = np.asarray(vector, dtype=float).copy()
+    anchor = int(np.argmax(np.abs(oriented)))
+    if oriented[anchor] < 0:
+        oriented *= -1.0
+    return oriented
+
+
+def _componentwise_spectral_reorder(
+    matrix: np.ndarray,
+    *,
+    mode: str,
+    alpha: float | None,
+) -> ReorderResult:
+    """Paper-spec OW/TW ordering with deterministic component handling.
+
+    The active matrix is normalized once by its global maximum.  Components
+    are then solved independently and concatenated by decreasing raw mass.
+    For TW, each component Laplacian is built by the pinned ``mheatmap``
+    package; the benchmark owns only the paper-specific orchestration.
+    """
+    values = _validate_nonnegative_matrix(matrix)
+    n_rows, n_cols = values.shape
+    row_sums = values.sum(axis=1)
+    col_sums = values.sum(axis=0)
+    active_rows = np.flatnonzero(row_sums > 0)
+    active_cols = np.flatnonzero(col_sums > 0)
+    zero_rows = np.flatnonzero(row_sums == 0)
+    zero_cols = np.flatnonzero(col_sums == 0)
+
+    if len(active_rows) == 0 or len(active_cols) == 0:
+        row_order = np.arange(n_rows, dtype=int)
+        col_order = np.arange(n_cols, dtype=int)
+        return ReorderResult(
+            values.copy(),
+            row_order,
+            col_order,
+            component_count=0,
+        )
+
+    if mode == "two_walk" and (alpha is None or alpha <= 0):
+        raise ValueError("alpha must be positive for Two-Walk ordering")
+    if mode not in {"one_walk", "two_walk"}:
+        raise ValueError(f"unknown spectral mode: {mode!r}")
+
+    normalized = values / float(values.max())
+    labels, component_count = _active_support_labels(
+        values,
+        active_rows,
+        active_cols,
+    )
+    row_labels = labels[: len(active_rows)]
+    col_labels = labels[len(active_rows) :]
+
+    components: list[tuple[float, int, np.ndarray, np.ndarray]] = []
+    for component_id in range(component_count):
+        component_rows = active_rows[row_labels == component_id]
+        component_cols = active_cols[col_labels == component_id]
+        mass = float(values[np.ix_(component_rows, component_cols)].sum())
+        first_vertex = min(
+            int(component_rows.min()),
+            n_rows + int(component_cols.min()),
+        )
+        components.append((mass, first_vertex, component_rows, component_cols))
+    components.sort(key=lambda item: (-item[0], item[1]))
+
+    ordered_rows: list[np.ndarray] = []
+    ordered_cols: list[np.ndarray] = []
+    component_masses: list[float] = []
+    for mass, _, component_rows, component_cols in components:
+        block = normalized[np.ix_(component_rows, component_cols)]
+        if mode == "one_walk":
+            local_rows, local_cols = block.shape
+            adjacency = np.block(
+                [
+                    [np.zeros((local_rows, local_rows), dtype=float), block],
+                    [block.T, np.zeros((local_cols, local_cols), dtype=float)],
+                ]
+            )
+            laplacian = np.diag(adjacency.sum(axis=1)) - adjacency
+        else:
+            laplacian = np.asarray(
+                mheatmap_two_walk_laplacian(block, alpha=float(alpha)),
+                dtype=float,
+            )
+
+        expected_size = block.shape[0] + block.shape[1]
+        if laplacian.shape != (expected_size, expected_size):
+            raise RuntimeError("component Laplacian has an unexpected shape")
+        eigenvalues, eigenvectors = eigh(laplacian, check_finite=False)
+        if len(eigenvalues) < 2:
+            raise RuntimeError("an active support component must have >=2 vertices")
+        fiedler = _orient_fiedler(eigenvectors[:, 1])
+        joint_order = np.argsort(fiedler, kind="stable")
+
+        local_row_count = len(component_rows)
+        local_rows = joint_order[joint_order < local_row_count]
+        local_cols = joint_order[joint_order >= local_row_count] - local_row_count
+        ordered_rows.append(component_rows[local_rows])
+        ordered_cols.append(component_cols[local_cols])
+        component_masses.append(mass)
+
+    row_order = np.concatenate([*ordered_rows, zero_rows]).astype(int, copy=False)
+    col_order = np.concatenate([*ordered_cols, zero_cols]).astype(int, copy=False)
+    _validate_permutation(row_order, n_rows, "row")
+    _validate_permutation(col_order, n_cols, "column")
     return ReorderResult(
-        apply_orders(matrix, row_order, col_order),
+        apply_orders(values, row_order, col_order),
         row_order,
         col_order,
+        component_count=component_count,
+        component_masses=tuple(component_masses),
+    )
+
+
+def _validate_permutation(order: np.ndarray, length: int, axis: str) -> None:
+    if len(order) != length or not np.array_equal(np.sort(order), np.arange(length)):
+        raise RuntimeError(f"invalid {axis} permutation")
+
+
+def one_walk_reorder(matrix: np.ndarray) -> ReorderResult:
+    return _componentwise_spectral_reorder(
+        matrix,
+        mode="one_walk",
+        alpha=None,
     )
 
 
@@ -603,21 +760,11 @@ def median_reorder(
 
 
 def tw_reorder(matrix: np.ndarray) -> ReorderResult:
-    row_labels = np.arange(matrix.shape[0], dtype=int)
-    tw_matrix, tw_row_labels = spectral_permute(matrix, row_labels, mode="tw")
-    row_order = tw_row_labels.astype(int)
-    col_order = recover_column_order(matrix, row_order, tw_matrix)
-    row_order, col_order = orient_orders_for_diagonal(matrix, row_order, col_order)
-    return ReorderResult(
-        apply_orders(matrix, row_order, col_order),
-        row_order,
-        col_order,
-    )
+    """Compatibility wrapper for paper-spec Two-Walk with ``alpha=1``."""
+    return tw_alpha_reorder(matrix, alpha=1.0)
 
 
 def tw_reorder_for_alpha(matrix: np.ndarray, alpha: float) -> ReorderResult:
-    if abs(alpha - 1.0) <= 1e-12:
-        return tw_reorder(matrix)
     return tw_alpha_reorder(matrix, alpha=alpha)
 
 
@@ -653,35 +800,9 @@ def tw_auto_reorder(
 
 
 def tw_alpha_reorder(matrix: np.ndarray, alpha: float) -> ReorderResult:
-    rows, cols = matrix.shape
-    row_sums = np.sum(matrix, axis=1)
-    col_sums = np.sum(matrix, axis=0)
-    nonzero_rows = np.where(row_sums > 0)[0]
-    nonzero_cols = np.where(col_sums > 0)[0]
-
-    if len(nonzero_rows) == 0 or len(nonzero_cols) == 0:
-        row_order = np.arange(rows, dtype=int)
-        col_order = np.arange(cols, dtype=int)
-        return ReorderResult(matrix.copy(), row_order, col_order)
-
-    B_sub = matrix[np.ix_(nonzero_rows, nonzero_cols)].astype(float)
-    if np.max(B_sub) > 0:
-        B_sub = B_sub / np.max(B_sub)
-
-    laplacian = two_walk_laplacian(B_sub, alpha=alpha)
-    eigenvalues, eigenvectors = eigh(laplacian)
-    fiedler_index = np.where(np.abs(eigenvalues) > 1e-10)[0][0]
-    bipartite_order = np.argsort(eigenvectors[:, fiedler_index])
-    row_order, col_order = copermute_from_bipermute(
-        [rows, cols],
-        nonzero_rows,
-        nonzero_cols,
-        bipartite_order,
-    )
-    row_order, col_order = orient_orders_for_diagonal(matrix, row_order, col_order)
-    return ReorderResult(
-        apply_orders(matrix, row_order, col_order),
-        row_order,
-        col_order,
+    return _componentwise_spectral_reorder(
+        matrix,
+        mode="two_walk",
+        alpha=float(alpha),
     )
 

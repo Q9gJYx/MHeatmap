@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 sys.modules.setdefault("numexpr", None)
@@ -20,11 +21,11 @@ from _benchmark_utils import (
     DEFAULT_WIDTH_GRID,
     ReorderResult,
     ca_svd_reorder,
-    diagonal_band_mass,
     hierarchical_olo_reorder,
     marginal_sort_reorder,
     median_reorder,
     mwb_auc,
+    normalized_band_mass,
     normalized_two_sum,
     one_walk_reorder,
     tw_auto_reorder,
@@ -99,6 +100,7 @@ def save_paper_table(pivot: pd.DataFrame) -> None:
     paper.loc[:, csv_columns].to_csv(
         PROCESSED_DIR / "synthetic_strong_baselines_paper.csv",
         index=False,
+        lineterminator="\n",
     )
 
     md_lines = [
@@ -122,6 +124,7 @@ def save_paper_table(pivot: pd.DataFrame) -> None:
     (PROCESSED_DIR / "synthetic_strong_baselines_paper.md").write_text(
         "\n".join(md_lines) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -167,6 +170,7 @@ def main() -> None:
 
     for family in FAMILIES:
         for size in SIZES:
+            group_started = time.perf_counter()
             for seed in range(NUM_SEEDS):
                 payload = build_case(family, size, seed)
                 observed = payload["observed"]
@@ -196,10 +200,15 @@ def main() -> None:
                             "seed": seed,
                             "method": method,
                             "two_sum": normalized_two_sum(matrix),
-                            "band_mass_10": diagonal_band_mass(matrix, 0.10),
+                            "band_mass_10": normalized_band_mass(matrix, 0.10),
                             "mwb_auc": mwb_auc(matrix, DEFAULT_WIDTH_GRID),
                         }
                     )
+            print(
+                f"{family.name} / {size.name}: "
+                f"{time.perf_counter() - group_started:.1f}s",
+                flush=True,
+            )
 
     save_outputs(records)
 
