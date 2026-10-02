@@ -56,6 +56,15 @@ METHOD_SHORT = {
 
 def save_paper_table(records: list[dict[str, object]]) -> None:
     df = pd.DataFrame.from_records(records)
+    selected = df.loc[
+        df["method"] == "TW",
+        ["dataset_index", "dataset", "shape", "selected_alpha"],
+    ].copy()
+    selected.to_csv(
+        OUTPUT_DIR / "real_world_selected_alpha.csv",
+        index=False,
+        lineterminator="\n",
+    )
     pivot = df.pivot_table(
         index=["dataset_index", "dataset", "shape"],
         columns="method",
@@ -71,6 +80,8 @@ def save_paper_table(records: list[dict[str, object]]) -> None:
     )
 
     paper = pivot.loc[:, ["dataset", "shape"]].copy()
+    alpha_by_dataset = selected.set_index("dataset")["selected_alpha"]
+    paper["best_alpha"] = paper["dataset"].map(alpha_by_dataset).astype(float)
     for metric, _ in metric_specs:
         for method in METHOD_ORDER:
             values = pivot[f"{metric}|{method}"].astype(float)
@@ -78,7 +89,7 @@ def save_paper_table(records: list[dict[str, object]]) -> None:
                 values = values * 100.0
             paper[f"{metric}|{method}"] = values.round(2)
 
-    csv_columns = ["dataset", "shape"]
+    csv_columns = ["dataset", "shape", "best_alpha"]
     for metric, _ in metric_specs:
         for method in METHOD_ORDER:
             csv_columns.append(f"{metric}|{method}")
@@ -91,17 +102,22 @@ def save_paper_table(records: list[dict[str, object]]) -> None:
     md_lines = [
         "# Real-World Rectangular Benchmark (Paper Table)",
         "",
-        "| Dataset | Shape | "
+        (
+            "Best $\\alpha$ maximizes MWB-AUC on the submitted grid; exact "
+            "ties use the smaller value."
+        ),
+        "",
+        "| Dataset | Shape | Best $\\alpha$ | "
         + " | ".join(
             f"{title} {METHOD_SHORT[method]}"
             for metric, title in metric_specs
             for method in METHOD_ORDER
         )
         + " |",
-        "|---|---|" + "---:|" * (len(metric_specs) * len(METHOD_ORDER)),
+        "|---|---|---:|" + "---:|" * (len(metric_specs) * len(METHOD_ORDER)),
     ]
     for _, row in paper.iterrows():
-        cells = [row["dataset"], row["shape"]]
+        cells = [row["dataset"], row["shape"], f"{float(row['best_alpha']):g}"]
         for metric, _ in metric_specs:
             for method in METHOD_ORDER:
                 cells.append(f"{float(row[f'{metric}|{method}']):.2f}")
@@ -155,6 +171,7 @@ def main() -> None:
                     "two_sum": normalized_two_sum(matrix),
                     "band_mass_10": normalized_band_mass(matrix, 0.10),
                     "mwb_auc": mwb_auc(matrix, DEFAULT_WIDTH_GRID),
+                    "selected_alpha": tw_auto.alpha if method == "TW" else np.nan,
                 }
             )
         print(

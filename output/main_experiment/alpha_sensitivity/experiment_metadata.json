@@ -1,0 +1,31 @@
+{
+  "positive_alpha_grid": [
+    0.01,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    2.0,
+    4.0,
+    6.0,
+    8.0,
+    12.0,
+    24.0
+  ],
+  "submitted_alpha_grid": [
+    1.0,
+    2.0,
+    4.0,
+    6.0,
+    8.0,
+    12.0
+  ],
+  "global_alpha_selection_suite": "synthetic only (300 instances)",
+  "global_alpha_selection_objective": "mean retained MWB-AUC",
+  "global_alpha": 12.0,
+  "tie_break": "smaller alpha within 1e-12",
+  "alpha_zero_policy": "spectral degeneracy diagnostic only; no ordering metric is reported",
+  "elapsed_seconds": 722.0770857000025
+}

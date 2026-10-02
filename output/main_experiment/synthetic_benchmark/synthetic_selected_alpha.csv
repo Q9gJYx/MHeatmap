@@ -1,0 +1,301 @@
+family,family_key,size,size_key,seed,selected_alpha
+Family A: Clean one-to-one,clean_block,Small,small,0,6.0
+Family A: Clean one-to-one,clean_block,Small,small,1,8.0
+Family A: Clean one-to-one,clean_block,Small,small,2,12.0
+Family A: Clean one-to-one,clean_block,Small,small,3,2.0
+Family A: Clean one-to-one,clean_block,Small,small,4,1.0
+Family A: Clean one-to-one,clean_block,Small,small,5,12.0
+Family A: Clean one-to-one,clean_block,Small,small,6,12.0
+Family A: Clean one-to-one,clean_block,Small,small,7,4.0
+Family A: Clean one-to-one,clean_block,Small,small,8,1.0
+Family A: Clean one-to-one,clean_block,Small,small,9,12.0
+Family A: Clean one-to-one,clean_block,Small,small,10,6.0
+Family A: Clean one-to-one,clean_block,Small,small,11,2.0
+Family A: Clean one-to-one,clean_block,Small,small,12,12.0
+Family A: Clean one-to-one,clean_block,Small,small,13,12.0
+Family A: Clean one-to-one,clean_block,Small,small,14,1.0
+Family A: Clean one-to-one,clean_block,Small,small,15,6.0
+Family A: Clean one-to-one,clean_block,Small,small,16,6.0
+Family A: Clean one-to-one,clean_block,Small,small,17,12.0
+Family A: Clean one-to-one,clean_block,Small,small,18,2.0
+Family A: Clean one-to-one,clean_block,Small,small,19,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,0,8.0
+Family A: Clean one-to-one,clean_block,Medium,medium,1,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,2,2.0
+Family A: Clean one-to-one,clean_block,Medium,medium,3,12.0
+Family A: Clean one-to-one,clean_block,Medium,medium,4,2.0
+Family A: Clean one-to-one,clean_block,Medium,medium,5,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,6,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,7,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,8,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,9,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,10,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,11,6.0
+Family A: Clean one-to-one,clean_block,Medium,medium,12,12.0
+Family A: Clean one-to-one,clean_block,Medium,medium,13,2.0
+Family A: Clean one-to-one,clean_block,Medium,medium,14,12.0
+Family A: Clean one-to-one,clean_block,Medium,medium,15,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,16,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,17,4.0
+Family A: Clean one-to-one,clean_block,Medium,medium,18,1.0
+Family A: Clean one-to-one,clean_block,Medium,medium,19,2.0
+Family A: Clean one-to-one,clean_block,Large,large,0,2.0
+Family A: Clean one-to-one,clean_block,Large,large,1,1.0
+Family A: Clean one-to-one,clean_block,Large,large,2,2.0
+Family A: Clean one-to-one,clean_block,Large,large,3,1.0
+Family A: Clean one-to-one,clean_block,Large,large,4,1.0
+Family A: Clean one-to-one,clean_block,Large,large,5,8.0
+Family A: Clean one-to-one,clean_block,Large,large,6,8.0
+Family A: Clean one-to-one,clean_block,Large,large,7,12.0
+Family A: Clean one-to-one,clean_block,Large,large,8,2.0
+Family A: Clean one-to-one,clean_block,Large,large,9,1.0
+Family A: Clean one-to-one,clean_block,Large,large,10,4.0
+Family A: Clean one-to-one,clean_block,Large,large,11,4.0
+Family A: Clean one-to-one,clean_block,Large,large,12,1.0
+Family A: Clean one-to-one,clean_block,Large,large,13,6.0
+Family A: Clean one-to-one,clean_block,Large,large,14,1.0
+Family A: Clean one-to-one,clean_block,Large,large,15,2.0
+Family A: Clean one-to-one,clean_block,Large,large,16,1.0
+Family A: Clean one-to-one,clean_block,Large,large,17,6.0
+Family A: Clean one-to-one,clean_block,Large,large,18,2.0
+Family A: Clean one-to-one,clean_block,Large,large,19,4.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,0,12.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,1,6.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,2,4.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,3,4.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,4,1.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,5,2.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,6,4.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,7,12.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,8,6.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,9,1.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,10,2.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,11,12.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,12,6.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,13,1.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,14,2.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,15,1.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,16,2.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,17,8.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,18,6.0
+Family B: Paired subgroup overlap,paired_overlap,Small,small,19,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,0,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,1,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,2,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,3,4.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,4,4.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,5,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,6,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,7,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,8,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,9,8.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,10,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,11,2.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,12,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,13,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,14,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,15,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,16,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,17,12.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,18,1.0
+Family B: Paired subgroup overlap,paired_overlap,Medium,medium,19,2.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,0,2.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,1,2.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,2,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,3,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,4,8.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,5,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,6,6.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,7,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,8,8.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,9,6.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,10,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,11,8.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,12,4.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,13,4.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,14,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,15,8.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,16,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,17,12.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,18,2.0
+Family B: Paired subgroup overlap,paired_overlap,Large,large,19,12.0
+Family C: Shared super-prototype,shared_super,Small,small,0,1.0
+Family C: Shared super-prototype,shared_super,Small,small,1,2.0
+Family C: Shared super-prototype,shared_super,Small,small,2,2.0
+Family C: Shared super-prototype,shared_super,Small,small,3,4.0
+Family C: Shared super-prototype,shared_super,Small,small,4,6.0
+Family C: Shared super-prototype,shared_super,Small,small,5,1.0
+Family C: Shared super-prototype,shared_super,Small,small,6,2.0
+Family C: Shared super-prototype,shared_super,Small,small,7,1.0
+Family C: Shared super-prototype,shared_super,Small,small,8,12.0
+Family C: Shared super-prototype,shared_super,Small,small,9,12.0
+Family C: Shared super-prototype,shared_super,Small,small,10,4.0
+Family C: Shared super-prototype,shared_super,Small,small,11,2.0
+Family C: Shared super-prototype,shared_super,Small,small,12,1.0
+Family C: Shared super-prototype,shared_super,Small,small,13,12.0
+Family C: Shared super-prototype,shared_super,Small,small,14,12.0
+Family C: Shared super-prototype,shared_super,Small,small,15,4.0
+Family C: Shared super-prototype,shared_super,Small,small,16,1.0
+Family C: Shared super-prototype,shared_super,Small,small,17,2.0
+Family C: Shared super-prototype,shared_super,Small,small,18,1.0
+Family C: Shared super-prototype,shared_super,Small,small,19,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,0,1.0
+Family C: Shared super-prototype,shared_super,Medium,medium,1,4.0
+Family C: Shared super-prototype,shared_super,Medium,medium,2,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,3,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,4,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,5,2.0
+Family C: Shared super-prototype,shared_super,Medium,medium,6,4.0
+Family C: Shared super-prototype,shared_super,Medium,medium,7,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,8,6.0
+Family C: Shared super-prototype,shared_super,Medium,medium,9,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,10,2.0
+Family C: Shared super-prototype,shared_super,Medium,medium,11,4.0
+Family C: Shared super-prototype,shared_super,Medium,medium,12,1.0
+Family C: Shared super-prototype,shared_super,Medium,medium,13,1.0
+Family C: Shared super-prototype,shared_super,Medium,medium,14,4.0
+Family C: Shared super-prototype,shared_super,Medium,medium,15,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,16,4.0
+Family C: Shared super-prototype,shared_super,Medium,medium,17,12.0
+Family C: Shared super-prototype,shared_super,Medium,medium,18,6.0
+Family C: Shared super-prototype,shared_super,Medium,medium,19,6.0
+Family C: Shared super-prototype,shared_super,Large,large,0,2.0
+Family C: Shared super-prototype,shared_super,Large,large,1,2.0
+Family C: Shared super-prototype,shared_super,Large,large,2,8.0
+Family C: Shared super-prototype,shared_super,Large,large,3,12.0
+Family C: Shared super-prototype,shared_super,Large,large,4,8.0
+Family C: Shared super-prototype,shared_super,Large,large,5,6.0
+Family C: Shared super-prototype,shared_super,Large,large,6,6.0
+Family C: Shared super-prototype,shared_super,Large,large,7,4.0
+Family C: Shared super-prototype,shared_super,Large,large,8,12.0
+Family C: Shared super-prototype,shared_super,Large,large,9,8.0
+Family C: Shared super-prototype,shared_super,Large,large,10,8.0
+Family C: Shared super-prototype,shared_super,Large,large,11,4.0
+Family C: Shared super-prototype,shared_super,Large,large,12,2.0
+Family C: Shared super-prototype,shared_super,Large,large,13,2.0
+Family C: Shared super-prototype,shared_super,Large,large,14,4.0
+Family C: Shared super-prototype,shared_super,Large,large,15,4.0
+Family C: Shared super-prototype,shared_super,Large,large,16,12.0
+Family C: Shared super-prototype,shared_super,Large,large,17,8.0
+Family C: Shared super-prototype,shared_super,Large,large,18,8.0
+Family C: Shared super-prototype,shared_super,Large,large,19,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,0,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,1,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,2,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,3,2.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,4,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,5,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,6,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,7,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,8,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,9,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,10,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,11,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,12,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,13,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,14,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,15,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,16,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,17,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,18,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Small,small,19,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,0,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,1,2.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,2,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,3,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,4,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,5,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,6,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,7,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,8,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,9,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,10,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,11,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,12,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,13,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,14,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,15,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,16,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,17,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,18,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Medium,medium,19,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,0,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,1,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,2,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,3,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,4,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,5,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,6,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,7,2.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,8,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,9,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,10,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,11,4.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,12,8.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,13,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,14,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,15,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,16,6.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,17,1.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,18,12.0
+Family D: Shared prototype with noise,shared_super_noisy,Large,large,19,4.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,0,8.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,1,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,2,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,3,2.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,4,1.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,5,1.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,6,8.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,7,8.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,8,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,9,8.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,10,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,11,8.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,12,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,13,4.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,14,6.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,15,12.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,16,1.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,17,2.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,18,2.0
+Family E: Cross-block leakage,cross_block_leakage,Small,small,19,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,0,1.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,1,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,2,6.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,3,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,4,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,5,2.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,6,2.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,7,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,8,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,9,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,10,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,11,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,12,4.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,13,4.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,14,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,15,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,16,4.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,17,4.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,18,12.0
+Family E: Cross-block leakage,cross_block_leakage,Medium,medium,19,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,0,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,1,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,2,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,3,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,4,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,5,4.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,6,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,7,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,8,1.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,9,2.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,10,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,11,6.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,12,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,13,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,14,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,15,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,16,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,17,1.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,18,12.0
+Family E: Cross-block leakage,cross_block_leakage,Large,large,19,12.0

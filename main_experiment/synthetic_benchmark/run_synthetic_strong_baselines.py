@@ -90,13 +90,15 @@ def save_paper_table(pivot: pd.DataFrame) -> None:
             if metric == "two_sum_mean":
                 values = values * 100.0
             paper[f"{metric}|{method}"] = values
+    paper["best_alpha_mean"] = pivot["best_alpha_mean"].astype(float)
     paper = paper.sort_values(["family_rank", "size_rank"]).reset_index(drop=True)
 
-    csv_columns = ["family", "size"]
+    csv_columns = ["family", "size", "best_alpha_mean"]
     for metric, _, _ in metric_specs:
         for method in methods:
             csv_columns.append(f"{metric}|{method}")
             paper[f"{metric}|{method}"] = paper[f"{metric}|{method}"].round(2)
+    paper["best_alpha_mean"] = paper["best_alpha_mean"].round(2)
     paper.loc[:, csv_columns].to_csv(
         PROCESSED_DIR / "synthetic_strong_baselines_paper.csv",
         index=False,
@@ -106,17 +108,23 @@ def save_paper_table(pivot: pd.DataFrame) -> None:
     md_lines = [
         "# Synthetic Rectangular Benchmark (Paper Table)",
         "",
-        "| Family | Size | "
+        (
+            "Best $\\alpha$ maximizes MWB-AUC on the submitted grid; exact "
+            "ties use the smaller value. Synthetic entries are means over "
+            f"{NUM_SEEDS} per-instance selections."
+        ),
+        "",
+        "| Family | Size | Mean best $\\alpha$ | "
         + " | ".join(
             f"{title} {METHOD_SHORT[method]}"
             for _, title, _ in metric_specs
             for method in methods
         )
         + " |",
-        "|---|---|" + "---:|" * (len(metric_specs) * len(methods)),
+        "|---|---|---:|" + "---:|" * (len(metric_specs) * len(methods)),
     ]
     for _, row in paper.iterrows():
-        cells = [row["family"], row["size"]]
+        cells = [row["family"], row["size"], f"{float(row['best_alpha_mean']):.2f}"]
         for metric, _, _ in metric_specs:
             for method in methods:
                 cells.append(f"{float(row[f'{metric}|{method}']):.2f}")
@@ -130,6 +138,29 @@ def save_paper_table(pivot: pd.DataFrame) -> None:
 
 def save_outputs(records: list[dict[str, object]]) -> None:
     df = pd.DataFrame.from_records(records)
+
+    selected = df.loc[
+        df["method"] == "TW",
+        [
+            "family",
+            "family_key",
+            "size",
+            "size_key",
+            "seed",
+            "selected_alpha",
+        ],
+    ].copy()
+    selected.to_csv(
+        PROCESSED_DIR / "synthetic_selected_alpha.csv",
+        index=False,
+        lineterminator="\n",
+    )
+    alpha_summary = selected.groupby(
+        ["family", "family_key", "size", "size_key"],
+        as_index=False,
+    ).agg(
+        best_alpha_mean=("selected_alpha", "mean")
+    )
 
     summary = (
         df.groupby(
@@ -150,6 +181,12 @@ def save_outputs(records: list[dict[str, object]]) -> None:
     )
     pivot.columns = [f"{metric}|{method}" for metric, method in pivot.columns]
     pivot = pivot.reset_index()
+    pivot = pivot.merge(
+        alpha_summary,
+        on=["family", "family_key", "size", "size_key"],
+        how="left",
+        validate="one_to_one",
+    )
     pivot = pivot.sort_values(["family_key", "size_key"]).reset_index(drop=True)
 
     save_paper_table(pivot)
@@ -202,6 +239,9 @@ def main() -> None:
                             "two_sum": normalized_two_sum(matrix),
                             "band_mass_10": normalized_band_mass(matrix, 0.10),
                             "mwb_auc": mwb_auc(matrix, DEFAULT_WIDTH_GRID),
+                            "selected_alpha": (
+                                tw_auto.alpha if method == "TW" else np.nan
+                            ),
                         }
                     )
             print(

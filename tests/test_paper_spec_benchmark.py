@@ -29,6 +29,15 @@ from _benchmark_utils import (  # noqa: E402
 )
 from run_synthetic_evaluation import FAMILIES, SIZES, build_case  # noqa: E402
 
+ALPHA_DIR = REPO_ROOT / "main_experiment" / "alpha_sensitivity"
+if str(ALPHA_DIR) not in sys.path:
+    sys.path.insert(0, str(ALPHA_DIR))
+from run_alpha_sensitivity import (  # noqa: E402
+    alpha_zero_diagnostic,
+    choose_global_alpha,
+    select_best_rows,
+)
+
 
 MATRIX_DIR = (
     REPO_ROOT
@@ -142,6 +151,42 @@ class ComponentwiseOrderingTest(unittest.TestCase):
         expected = np.diag(adjacency.sum(axis=1)) - adjacency
         actual = benchmark.mheatmap_two_walk_laplacian(block, alpha=alpha)
         np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-15)
+
+    def test_positive_subunit_alpha_is_supported_and_deterministic(self) -> None:
+        first = tw_alpha_reorder(self.matrix, alpha=0.25)
+        repeated = tw_alpha_reorder(self.matrix, alpha=0.25)
+        np.testing.assert_array_equal(first.row_order, repeated.row_order)
+        np.testing.assert_array_equal(first.col_order, repeated.col_order)
+
+    def test_alpha_zero_is_rejected_as_an_order_but_has_two_modes_per_component(self) -> None:
+        with self.assertRaisesRegex(ValueError, "alpha must be positive"):
+            tw_alpha_reorder(self.matrix, alpha=0.0)
+        diagnostic = alpha_zero_diagnostic(self.matrix, {"case_id": "unit"})
+        self.assertEqual(diagnostic["component_count"], 2)
+        self.assertEqual(diagnostic["expected_nullity"], 4)
+        self.assertEqual(diagnostic["observed_nullity"], 4)
+        self.assertFalse(diagnostic["joint_order_identifiable"])
+
+
+class AlphaSelectionTest(unittest.TestCase):
+    def setUp(self) -> None:
+        import pandas as pd
+
+        self.records = pd.DataFrame(
+            {
+                "case_id": ["a", "a", "a", "b", "b", "b"],
+                "alpha": [0.5, 1.0, 2.0, 0.5, 1.0, 2.0],
+                "tw_mwb_auc": [0.8, 0.8, 0.7, 0.2, 0.5, 0.4],
+            }
+        )
+
+    def test_per_case_selection_uses_mwb_and_smaller_alpha_tie_break(self) -> None:
+        selected = select_best_rows(self.records, (0.5, 1.0, 2.0))
+        actual = dict(zip(selected["case_id"], selected["alpha"], strict=True))
+        self.assertEqual(actual, {"a": 0.5, "b": 1.0})
+
+    def test_global_selection_uses_mean_synthetic_mwb(self) -> None:
+        self.assertEqual(choose_global_alpha(self.records), 1.0)
 
 
 class RepositoryIntegrationTest(unittest.TestCase):

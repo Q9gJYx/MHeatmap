@@ -1,0 +1,23 @@
+suite,case_id,family,size,dataset,n_rows,n_cols,alpha,component_count,expected_nullity,observed_nullity,component_nullities,joint_order_identifiable
+synthetic,synthetic/clean_block/small/seed-00,Family A: Clean one-to-one,Small,,100,90,0.0,1,2,2,[2],False
+synthetic,synthetic/clean_block/medium/seed-00,Family A: Clean one-to-one,Medium,,200,180,0.0,1,2,2,[2],False
+synthetic,synthetic/clean_block/large/seed-00,Family A: Clean one-to-one,Large,,400,360,0.0,1,2,2,[2],False
+synthetic,synthetic/paired_overlap/small/seed-00,Family B: Paired subgroup overlap,Small,,100,90,0.0,1,2,2,[2],False
+synthetic,synthetic/paired_overlap/medium/seed-00,Family B: Paired subgroup overlap,Medium,,200,180,0.0,1,2,2,[2],False
+synthetic,synthetic/paired_overlap/large/seed-00,Family B: Paired subgroup overlap,Large,,400,360,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super/small/seed-00,Family C: Shared super-prototype,Small,,100,90,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super/medium/seed-00,Family C: Shared super-prototype,Medium,,200,180,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super/large/seed-00,Family C: Shared super-prototype,Large,,400,360,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super_noisy/small/seed-00,Family D: Shared prototype with noise,Small,,100,90,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super_noisy/medium/seed-00,Family D: Shared prototype with noise,Medium,,200,180,0.0,1,2,2,[2],False
+synthetic,synthetic/shared_super_noisy/large/seed-00,Family D: Shared prototype with noise,Large,,400,360,0.0,1,2,2,[2],False
+synthetic,synthetic/cross_block_leakage/small/seed-00,Family E: Cross-block leakage,Small,,100,90,0.0,1,2,2,[2],False
+synthetic,synthetic/cross_block_leakage/medium/seed-00,Family E: Cross-block leakage,Medium,,200,180,0.0,1,2,2,[2],False
+synthetic,synthetic/cross_block_leakage/large/seed-00,Family E: Cross-block leakage,Large,,400,360,0.0,1,2,2,[2],False
+real,real/naics_sic,,,SIC -> NAICS,1004,1176,0.0,410,820,820,"[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]",False
+real,real/cip_soc,,,CIP -> SOC,2143,868,0.0,46,92,92,"[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]",False
+real,real/acs_clean,,,ACS OCCP x INDP,24,10,0.0,1,2,2,[2],False
+real,real/lodes_clean,,,LODES Home x Work County,95,95,0.0,1,2,2,[2],False
+real,real/twenty_newsgroups,,,20 Newsgroups Term x Document,60,48,0.0,1,2,2,[2],False
+real,real/gtfs_clean,,,MBTA GTFS Route x Station,8,125,0.0,1,2,2,[2],False
+real,real/openalex,,,OpenAlex Author x Topic,60,8,0.0,5,10,10,"[2, 2, 2, 2, 2]",False

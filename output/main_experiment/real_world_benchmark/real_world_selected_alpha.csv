@@ -1,0 +1,8 @@
+dataset_index,dataset,shape,selected_alpha
+0,SIC -> NAICS,1004x1176,1.0
+1,CIP -> SOC,2143x868,6.0
+2,ACS OCCP x INDP,24x10,4.0
+3,LODES Home x Work County,95x95,4.0
+4,20 Newsgroups Term x Document,60x48,12.0
+5,MBTA GTFS Route x Station,8x125,2.0
+6,OpenAlex Author x Topic,60x8,1.0
