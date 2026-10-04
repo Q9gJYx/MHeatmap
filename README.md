@@ -11,7 +11,9 @@ and figure code specific to the paper.
 .
 ├── main_experiment/
 │   ├── synthetic_benchmark/    # Families A–E, 3 sizes, 20 seeds (Table 1 top)
-│   └── real_world_benchmark/   # 7 real datasets (Teaser, Table 1 bottom)
+│   ├── real_world_benchmark/   # 7 real datasets (Teaser, Table 1 bottom)
+│   ├── alpha_sensitivity/      # Fixed alpha and adaptive-selection controls
+│   └── normalized_laplacian/   # Degree-normalized final-Laplacian ablation
 ├── examples/
 │   └── tabula_sapiens/         # Fig 3 case study (4 tissues × 3 panels)
 ├── output/
@@ -81,6 +83,24 @@ Run the paper-specification regression tests with:
 ```bash
 uv run python -m unittest discover -s tests -v
 ```
+
+### Normalized-Laplacian comparison (JfQK Q2)
+
+This paired ablation keeps the Two-Walk adjacency and the six-point alpha grid
+unchanged. It compares the combinatorial Laplacian with loop-free symmetric
+normalization, sorting the generalized coordinate `f = D^(-1/2) u`.
+Fixed `alpha=1`, the previously selected global `alpha=12`, and equal-grid
+adaptive selection are evaluated on all 300 synthetic and seven real matrices.
+
+```bash
+uv run python main_experiment/normalized_laplacian/run_normalized_laplacian.py
+uv run python main_experiment/normalized_laplacian/build_report.py
+```
+
+The [experiment README](main_experiment/normalized_laplacian/README.md) specifies
+the formulas, coordinate and self-loop conventions, paired intervals, and
+permutation/provenance artifacts. Results supplement Table 1 rather than
+creating a second Table 1 code path.
 
 ### Reproduce qualitative figures
 

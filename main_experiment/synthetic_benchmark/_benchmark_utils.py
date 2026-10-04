@@ -74,6 +74,7 @@ class ReorderResult:
     col_order: np.ndarray
     component_count: int | None = None
     component_masses: tuple[float, ...] = ()
+    spectral_diagnostics: tuple[dict[str, float], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -487,11 +488,36 @@ def _orient_fiedler(vector: np.ndarray) -> np.ndarray:
     return oriented
 
 
+def normalize_graph_laplacian(
+    laplacian: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return ``D^-1/2 L D^-1/2`` and self-loop-free degrees.
+
+    The diagonal of a combinatorial Laplacian is the sum of off-diagonal
+    adjacency weights: Gram self loops have already cancelled in ``D - A``.
+    Only connected active components, whose degrees are positive, are accepted.
+    """
+    values = np.asarray(laplacian, dtype=float)
+    if values.ndim != 2 or values.shape[0] != values.shape[1] or not values.size:
+        raise ValueError("laplacian must be a nonempty square matrix")
+    if not np.all(np.isfinite(values)):
+        raise ValueError("laplacian must contain only finite values")
+    if not np.allclose(values, values.T, rtol=1e-12, atol=1e-12):
+        raise ValueError("laplacian must be symmetric")
+    degrees = np.diag(values).copy()
+    if np.any(degrees <= 0):
+        raise ValueError("normalized active components must have positive degrees")
+    inverse_roots = 1.0 / np.sqrt(degrees)
+    normalized = inverse_roots[:, None] * values * inverse_roots[None, :]
+    return normalized, degrees
+
+
 def _componentwise_spectral_reorder(
     matrix: np.ndarray,
     *,
     mode: str,
     alpha: float | None,
+    laplacian_normalization: str = "combinatorial",
 ) -> ReorderResult:
     """Paper-spec OW/TW ordering with deterministic component handling.
 
@@ -499,7 +525,11 @@ def _componentwise_spectral_reorder(
     are then solved independently and concatenated by decreasing raw mass.
     For TW, each component Laplacian is built by the pinned ``mheatmap``
     package; the benchmark owns only the paper-specific orchestration.
+    The optional symmetric normalization is a rebuttal ablation. It uses
+    loop-free degrees and sorts the generalized coordinate ``D^-1/2 u``.
     """
+    if laplacian_normalization not in {"combinatorial", "symmetric"}:
+        raise ValueError("unknown laplacian normalization")
     values = _validate_nonnegative_matrix(matrix)
     n_rows, n_cols = values.shape
     row_sums = values.sum(axis=1)
@@ -548,6 +578,7 @@ def _componentwise_spectral_reorder(
     ordered_rows: list[np.ndarray] = []
     ordered_cols: list[np.ndarray] = []
     component_masses: list[float] = []
+    spectral_diagnostics: list[dict[str, float]] = []
     for mass, _, component_rows, component_cols in components:
         block = normalized[np.ix_(component_rows, component_cols)]
         if mode == "one_walk":
@@ -568,10 +599,58 @@ def _componentwise_spectral_reorder(
         expected_size = block.shape[0] + block.shape[1]
         if laplacian.shape != (expected_size, expected_size):
             raise RuntimeError("component Laplacian has an unexpected shape")
-        eigenvalues, eigenvectors = eigh(laplacian, check_finite=False)
+        if laplacian_normalization == "symmetric":
+            operator, degrees = normalize_graph_laplacian(laplacian)
+        else:
+            operator = laplacian
+        eigenvalues, eigenvectors = eigh(operator, check_finite=False)
         if len(eigenvalues) < 2:
             raise RuntimeError("an active support component must have >=2 vertices")
-        fiedler = _orient_fiedler(eigenvectors[:, 1])
+        coordinate = eigenvectors[:, 1]
+        if laplacian_normalization == "symmetric":
+            # L_sym u = lambda u is equivalent to L f = lambda D f.
+            # Select this coordinate convention before looking at metrics.
+            coordinate = coordinate / np.sqrt(degrees)
+            left = laplacian @ coordinate
+            right = eigenvalues[1] * degrees * coordinate
+            denominator = max(
+                np.finfo(float).eps,
+                float(np.linalg.norm(left)),
+                float(np.linalg.norm(right)),
+            )
+            null_coordinate = np.sqrt(degrees)
+            null_coordinate /= np.linalg.norm(null_coordinate)
+            coordinate_scale = max(
+                np.finfo(float).eps, float(np.max(np.abs(coordinate)))
+            )
+            split = len(component_rows)
+            spectral_diagnostics.append(
+                {
+                    "lambda_zero": float(eigenvalues[0]),
+                    "lambda_fiedler": float(eigenvalues[1]),
+                    "fiedler_gap": (
+                        float(eigenvalues[2] - eigenvalues[1])
+                        if len(eigenvalues) > 2 else float("nan")
+                    ),
+                    "generalized_relative_residual": float(
+                        np.linalg.norm(left - right) / denominator
+                    ),
+                    "null_mode_residual": float(
+                        np.linalg.norm(operator @ null_coordinate)
+                    ),
+                    "degree_min": float(degrees.min()),
+                    "degree_max": float(degrees.max()),
+                    "row_relative_spread": float(
+                        np.ptp(coordinate[:split]) / coordinate_scale
+                    ),
+                    "col_relative_spread": float(
+                        np.ptp(coordinate[split:]) / coordinate_scale
+                    ),
+                    "n_rows": float(split),
+                    "n_cols": float(len(component_cols)),
+                }
+            )
+        fiedler = _orient_fiedler(coordinate)
         joint_order = np.argsort(fiedler, kind="stable")
 
         local_row_count = len(component_rows)
@@ -591,6 +670,7 @@ def _componentwise_spectral_reorder(
         col_order,
         component_count=component_count,
         component_masses=tuple(component_masses),
+        spectral_diagnostics=tuple(spectral_diagnostics),
     )
 
 
@@ -604,6 +684,30 @@ def one_walk_reorder(matrix: np.ndarray) -> ReorderResult:
         matrix,
         mode="one_walk",
         alpha=None,
+    )
+
+
+def normalized_laplacian_reorder(
+    matrix: np.ndarray,
+    *,
+    mode: str = "two_walk",
+    alpha: float = 1.0,
+) -> ReorderResult:
+    """Normalized OW/TW ablation with the original adjacency and components.
+
+    Solve the symmetric-normalized Laplacian and sort ``f = D^-1/2 u``:
+    the random-walk/generalized normalized-cut coordinate, not ``u`` itself.
+    Gram self loops are excluded from the normalization degrees.
+    """
+    if mode not in {"one_walk", "two_walk"}:
+        raise ValueError(f"unknown spectral mode: {mode!r}")
+    if mode == "two_walk" and (not np.isfinite(alpha) or alpha <= 0):
+        raise ValueError("alpha must be positive and finite for Two-Walk ordering")
+    return _componentwise_spectral_reorder(
+        matrix,
+        mode=mode,
+        alpha=float(alpha) if mode == "two_walk" else None,
+        laplacian_normalization="symmetric",
     )
 
 
